@@ -1,0 +1,98 @@
+version: '3.8'
+
+volumes:
+  v-mariadb:
+    name: v-mariadb
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/joapedr2/data/mariadb-db
+
+  v-wordpress:
+    name: v-wordpress
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/joapedr2/data/wordpress-db
+
+networks:
+  inception_network:
+    name: inception_network
+
+services:
+  mariadb:
+    image: mariadb:joapedr2
+    container_name: mariadb
+    env_file:
+      - .env
+    environment:
+      - MYSQL_DB
+      - MYSQL_USER
+      - MYSQL_PSWD
+    build:
+      context: requirements/mariadb
+      dockerfile: Dockerfile
+      args:
+        - MYSQL_DB=${MYSQL_DB}
+        - MYSQL_USER=${MYSQL_USER}
+        - MYSQL_PSWD=${MYSQL_PSWD}
+    volumes:
+      - v-mariadb:/var/lib/mysql
+    networks:
+      - inception_network
+    restart: always
+
+  nginx:
+    image: nginx:joapedr2
+    container_name: nginx
+    env_file:
+      - .env
+    environment:
+      - SERVER_NAME
+    ports:
+      - 443:443
+    build:
+      args:
+        - SERVER_NAME=${SERVER_NAME}
+      context: requirements/nginx
+      dockerfile: Dockerfile
+    depends_on:
+      - mariadb
+    volumes:
+      - v-wordpress:/var/www/wordpress
+    networks:
+      - inception_network
+    restart: always
+
+  wordpress:
+    image: wordpress:joapedr2
+    container_name: wordpress
+    env_file:
+      - .env
+    environment:
+      - SERVER_NAME
+      - WP_ADMIN_MAIL
+      - WP_ADMIN_USER
+      - WP_ADMIN_PSWD
+      - WP_MAIL
+      - WP_USER
+      - WP_PSWD
+    build:
+      args:
+        - SERVER_NAME=${SERVER_NAME}
+        - WP_ADMIN_MAIL=${WP_ADMIN_MAIL}
+        - WP_ADMIN_USER=${WP_ADMIN_USER}
+        - WP_ADMIN_PSWD=${WP_ADMIN_PSWD}
+        - WP_MAIL=${WP_MAIL}
+        - WP_USER=${WP_USER}
+        - WP_PSWD=${WP_PSWD}
+      context: requirements/wordpress
+      dockerfile: Dockerfile
+    depends_on:
+      - mariadb
+    volumes:
+      - v-wordpress:/var/www/wordpress
+    networks:
+      - inception_network
+    restart: always
+
